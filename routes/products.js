@@ -5,6 +5,7 @@ const pool=require('../shared/pool');
 products.get('/',(req,res)=>{
     var mainCategoryId=req.query.maincategoryid;
     var subCategoryId=req.query.subcategoryid;
+    var keyword=req.query.keyword;
 
     let sqlquery = 'select * from products';
     if(subCategoryId){
@@ -14,6 +15,9 @@ products.get('/',(req,res)=>{
     if(mainCategoryId){
         sqlquery=`select products.* from products,categories 
         where products.fk_category_id =categories.id and categories.parent_category_id=${mainCategoryId}`;
+    }
+    if(keyword){
+      sqlquery += `  and keywords like '%${keyword}%'`
     }
     pool.connect()
     .then(() => {
