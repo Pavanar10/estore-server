@@ -1,8 +1,10 @@
 const express = require('express');
 const products = express.Router();
-const pool=require('../shared/pool');
+const poolPromise=require('../shared/pool');
 
-products.get('/',(req,res)=>{
+
+
+products.get('/',async (req,res)=>{
     var mainCategoryId=req.query.maincategoryid;
     var subCategoryId=req.query.subcategoryid;
     var keyword=req.query.keyword;
@@ -19,7 +21,24 @@ products.get('/',(req,res)=>{
     if(keyword){
       sqlquery += `  and keywords like '%${keyword}%'`
     }
-    pool.connect()
+    try {
+      const pool = await poolPromise;
+      // Make a query to retrieve data
+      const result = await pool.request().query(sqlquery);
+       
+      // Process the retrieved data
+      const data = result.recordset;
+
+      console.log("Retrieved data:", data);
+
+      res.status(200).json(data);
+  } catch (err) {
+      console.error("Error retrieving data:", err);
+      res.status(500).send("Error retrieving data");
+  }
+
+
+    /*pool.connect()
     .then(() => {
       // Query database and get the result set
       return pool.query(sqlquery);
@@ -35,12 +54,22 @@ products.get('/',(req,res)=>{
     .finally(() => {
       // Close the connection pool
       pool.close();
-    });
+    });*/
 });
 
-products.get('/(:id)',(req,res)=>{
+products.get('/(:id)', async (req,res)=>{
     let id = req.params.id;
-    pool.connect()
+  try{
+    const pool =  await poolPromise;
+    const result = await pool.request().query('SELECT * FROM products where id='+id);
+    const data = result.recordset;
+
+  res.status(200).json(data);
+  } catch (err) {
+    console.error("Error retrieving data:", err);
+    res.status(500).send({message:"Error retrieving data"});
+}
+    /*pool.connect()
     .then(()=>{
         return pool.query('SELECT * FROM products where id='+id);
     }).then(result=>{
@@ -49,6 +78,6 @@ products.get('/(:id)',(req,res)=>{
         res.status(500).send(err);
     }).finally(()=>{
         pool.close();
-    })
+    })*/
 })
 module.exports=products;

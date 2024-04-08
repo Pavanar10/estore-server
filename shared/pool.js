@@ -10,5 +10,12 @@ const config = {
     },
   };
   const pool = new sql.ConnectionPool(config);
+  const poolPromise = new sql.ConnectionPool(config)
+  .connect()
+  .then(pool => {
+      console.log('Connected to SQL Server');
+      return pool;
+  })
+  .catch(err => console.error('Database connection failed:', err));
 
-  module.exports=pool;
+  module.exports= poolPromise;
