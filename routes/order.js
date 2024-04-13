@@ -2,6 +2,7 @@ const express = require('express');
 const poolPromise = require('../shared/pool');
 const orders=express.Router();
 const checkToken=require('../shared/checktoken');
+const { pool } = require('mssql');
 
 
 orders.post('/add',checkToken,async(req,res)=>{
@@ -38,10 +39,8 @@ orders.post('/add',checkToken,async(req,res)=>{
                     console.log("detailsQuery",detailsQuery);
                   
                       const res1 =  await pool.request().query(detailsQuery);
-
-                    res.status(200).send({message:'Success'});
                 });
-
+                res.status(200).send({message:'Success'});
             }else{
                 res.status(401).send({
                     error:error.code,
@@ -54,6 +53,94 @@ orders.post('/add',checkToken,async(req,res)=>{
         }
     }catch(error){
         res.status(400).send({error:error.code,message:error.message});
+    }
+})
+
+orders.get('/allorders',checkToken,async (req,res)=>{
+    try{
+        const pool =await poolPromise;
+        let userEmail = req.query.userEmail;
+        const result = await pool.request().query(`select id from users where email ='${userEmail}'`);
+
+        if(result.recordset[0]){
+            let userId=result.recordset[0].id;
+            console.log(userId)
+            let sql = `select orderId ,Convert(varchar,orderDate,3) as orderDate, userName,address,city,state,pin,
+            total from orders where userId=${userId}`;
+            const orders = await pool.request().query(sql);
+         
+            if(orders.recordset[0]){
+                const allOrders=[];
+                orders.recordset.forEach(order=>{
+                    allOrders.push({
+                        orderId:order.orderId,
+                        userName:order.userName,
+                        address:order.address,
+                        city:order.city,
+                        state:order.state,
+                        pin:order.pin,
+                        total:order.total,
+                        orderDate:order.orderDate
+                    })
+
+                })
+                res.status(200).send(allOrders);
+            }else{
+                res.status(500).send({
+                    error:error.code,
+                    message:error.message
+                })
+            }
+        }else{
+            res.status(500).send({
+                error:error.code,
+                message:error.message
+            })
+        }
+
+    }catch(error){
+        res.status(400).send({
+            error:error.code,
+            message:error.message
+        })
+    }
+})
+
+orders.get('/orderProducts',async (req,res)=>{
+    try{
+        let orderId = req.query.orderId;
+        
+        const pool = await poolPromise;
+        const result = await pool.request().query(`select orderdetails.* , products.product_name,products.product_img from
+        orderdetails,products
+        where orderDetails.fk_productId=products.id and orderDetails.fk_orderId=${orderId}`);
+     
+        console.log("result",result.recordset)
+        if(result.recordset[0]){
+            let orderDetails=[];
+            result.recordset.forEach((orderProduct)=>{
+                orderDetails.push({
+                    productId:orderProduct.fk_productId,
+                    productName:orderProduct.product_name,
+                    productImage:orderProduct.product_img,
+                    qty:orderProduct.qty,
+                    price:orderProduct.price,
+                    amount:orderProduct.amount
+                });
+                console.log("details",orderDetails)
+                
+            })
+            res.status(200).send(orderDetails);
+        }else{
+            res.status(500).send({
+                message:"order not found"
+            })
+        }
+    }catch(error){
+        res.status(400).send({
+            error:error.code,
+            message:error.message
+        })
     }
 })
 module.exports=orders;

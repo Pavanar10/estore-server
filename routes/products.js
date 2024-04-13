@@ -29,7 +29,7 @@ products.get('/',async (req,res)=>{
       // Process the retrieved data
       const data = result.recordset;
 
-      console.log("Retrieved data:", data);
+  
 
       res.status(200).json(data);
   } catch (err) {
